@@ -18,12 +18,12 @@ import SwiftyJSON
 //    "objectType": "KalturaStartWidgetSessionResponse"
 //}
 
-class OVPStartWidgetSessionResponse: OVPBaseObject {
+public class OVPStartWidgetSessionResponse: OVPBaseObject {
 
-    let ks: String
+    public var ks: String
     private let ksKey = "ks"
     
-    required init?(json:Any){
+    required public init?(json:Any){
         let json = JSON(json)
         if let ks = json[self.ksKey].string {
             self.ks = ks

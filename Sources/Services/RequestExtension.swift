@@ -15,7 +15,7 @@ import KalturaNetKit
 extension KalturaRequestBuilder {
 
     @discardableResult
-    internal func setOVPBasicParams() -> Self{
+    public func setOVPBasicParams() -> Self{
         self.setClientTag(clientTag: "playkit")
         self.setApiVersion(apiVersion: "3.3.0")
         self.setFormat(format: 1)

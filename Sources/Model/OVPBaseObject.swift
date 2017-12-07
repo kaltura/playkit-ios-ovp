@@ -11,5 +11,5 @@
 import UIKit
 import KalturaNetKit
 
-protocol OVPBaseObject: KalturaBaseObject {
+public protocol OVPBaseObject: KalturaBaseObject {
 }

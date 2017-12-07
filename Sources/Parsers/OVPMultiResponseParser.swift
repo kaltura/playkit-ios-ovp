@@ -11,9 +11,9 @@
 import UIKit
 import SwiftyJSON
 
-class OVPMultiResponseParser: NSObject {
+public class OVPMultiResponseParser: NSObject {
     
-    static func parse(data: Any) -> [OVPBaseObject] {
+    public static func parse(data: Any) -> [OVPBaseObject] {
         
         let jsonResponse = JSON(data)
         if let resultArrayJSON = jsonResponse.array {
@@ -43,7 +43,7 @@ class OVPMultiResponseParser: NSObject {
         }
     }
     
-    static func  parseSingleItem(json:JSON) -> OVPBaseObject? {
+    public static func  parseSingleItem(json:JSON) -> OVPBaseObject? {
         
         let objectType: OVPBaseObject.Type? = OVPObjectMapper.classByJsonObject(json: json.dictionaryObject)
         if let type = objectType{
