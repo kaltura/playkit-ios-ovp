@@ -9,16 +9,26 @@
 // ===================================================================================================
 
 import UIKit
+import SwiftyJSON
 
 class OVPList: OVPBaseObject {
-
-    
     var objects: [OVPBaseObject]?
     
-    init(objects:[OVPBaseObject]?) {
+    let objectsKey = "objects"
+    
+    init(objects: [OVPBaseObject]?) {
         self.objects = objects
     }
     required init?(json: Any) {
-        
+        let jsonObject = JSON(json)
+        if let objects = jsonObject[objectsKey].array {
+            var parsedObjects: [OVPBaseObject] = [OVPBaseObject]()
+            for object in objects {
+                if let ovpObject = OVPResponseParser.parse(data: object.dictionaryObject) {
+                    parsedObjects.append(ovpObject)
+                }
+            }
+            self.objects = parsedObjects
+        }
     }
 }

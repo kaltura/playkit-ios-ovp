@@ -39,6 +39,8 @@ class OVPObjectMapper: NSObject {
                 return OVPMetadata.self
             case "KalturaStartWidgetSessionResponse":
                 return OVPStartWidgetSessionResponse.self
+            case "KalturaBaseEntryListResponse", "KalturaMetadataListResponse":
+                return OVPList.self
             default:
                 return nil
             }

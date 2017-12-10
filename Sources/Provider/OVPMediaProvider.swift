@@ -61,7 +61,6 @@ import PlayKit
         }
     }
     
-    @objc public var ks: String?
     @objc public var baseUrl: String?
     @objc public var partnerId: NSNumber?
     @objc public var entryId: String?
@@ -69,6 +68,7 @@ import PlayKit
     @objc public var referrer: String?
     public var executor: RequestExecutor?
     
+    private var ks: String?
     private var apiBaseUrl: String {
         return (baseUrl ?? "") + "/api_v3"
     }
@@ -144,12 +144,11 @@ import PlayKit
         return self
     }
     
+    private var entry: OVPEntry?
+    private var playbackContext: OVPPlaybackContext?
+    private var metadataList: [OVPMetadata]?
+    
     public func loadMedia(callback: @escaping (PKMediaEntry?, Error?) -> Void){
-        guard let ks = self.ks else {
-            PKLog.debug("Proivder must have ks")
-            callback(nil, OVPMediaProviderError.invalidParam(paramName: "ks"))
-            return
-        }
         guard let _ = self.baseUrl else {
             PKLog.debug("Proivder must have baseUrl")
             callback(nil, OVPMediaProviderError.invalidParam(paramName: "baseUrl"))
@@ -164,13 +163,29 @@ import PlayKit
         
         let mrb = KalturaMultiRequestBuilder(url: apiBaseUrl)?.setOVPBasicParams()
         
-        // Request for Entry data
-        let listRequest = OVPBaseEntryService.list(baseURL: apiBaseUrl, ks: ks, entryID: entryId)
+        if ks == nil {
+            // Adding "startWidgetSession" request in case we don't have ks
+            guard let partnerId = self.partnerId else {
+                PKLog.debug("Proivder must have partnerId")
+                callback(nil, OVPMediaProviderError.invalidParam(paramName: "partnerId"))
+                return
+            }
+            if let loginRequestBuilder = getStartWidgetRequest(serverUrl: apiBaseUrl, partnerId: partnerId.int64Value) {
+                mrb?.add(request: loginRequestBuilder)
+                ks = "{1:result:ks}"
+            }
+        }
         
-        // Request for Entry playback data in order to build sources to play
-        let getPlaybackContext =  OVPBaseEntryService.getPlaybackContext(baseURL: apiBaseUrl, ks: ks, entryID: entryId, referrer: referrer)
+        // if we don't have forwared token and not real token we can't continue
+        guard let token = ks else {
+            PKLog.debug("can't find ks and can't request as anonymous ks (WidgetSession)")
+            callback(nil, OVPMediaProviderError.invalidKS)
+            return
+        }
         
-        let metadataRequest = OVPBaseEntryService.metadata(baseURL: apiBaseUrl, ks: ks, entryID: entryId)
+        let listRequest = getEntryRequest(serverUrl: apiBaseUrl, ks: token, entryId: entryId)
+        let getPlaybackContext = getPlaybackContextRequest(serverUrl: apiBaseUrl, ks: token, entryId: entryId, referrer: referrer)
+        let metadataRequest = getMetadataRequest(serverUrl: apiBaseUrl, ks: token, entryId: entryId)
         
         guard let req1 = listRequest, let req2 = getPlaybackContext, let req3 = metadataRequest else {
             callback(nil, OVPMediaProviderError.invalidParams)
@@ -183,46 +198,23 @@ import PlayKit
             .add(request: req3)
             .set(completion: { (dataResponse: Response) in
                 
-                guard let data = dataResponse.data else {
-                    PKLog.debug("didn't get response data")
-                    callback(nil, OVPMediaProviderError.invalidResponse)
-                    return
-                }
-                
-                let responses: [OVPBaseObject] = OVPMultiResponseParser.parse(data: data)
-                
-                // At leat we need to get response of Entry and Playback, on anonymous we will have additional startWidgetSession call
-                guard responses.count == 3 else {
-                    PKLog.debug("didn't get response for all requests")
-                    callback(nil, OVPMediaProviderError.invalidResponse)
-                    return
-                }
-                
-                let metaData: OVPBaseObject = responses[responses.count-1]
-                let contextDataResponse: OVPBaseObject = responses[responses.count-2]
-                let mainResponse: OVPBaseObject = responses[responses.count-3]
-                
-                guard let mainResponseData = mainResponse as? OVPList,
-                    let entry = mainResponseData.objects?.last as? OVPEntry,
-                    let contextData = contextDataResponse as? OVPPlaybackContext,
-                    let sources = contextData.sources,
-                    let metadataListObject = metaData as? OVPList,
-                    let metadataList = metadataListObject.objects as? [OVPMetadata]
+                guard let entry = self.entry,
+                    let playbackContext = self.playbackContext,
+                    let sources = playbackContext.sources,
+                    let metadataList = self.metadataList
                     else {
                         PKLog.debug("Response is not containing Entry info or playback data")
                         callback(nil, OVPMediaProviderError.invalidResponse)
                         return
                 }
                 
-                if let context = contextDataResponse as? OVPPlaybackContext {
-                    if (context.hasBlockAction() != nil) {
-                        if let error = context.hasErrorMessage() {
-                            callback(nil, OVPMediaProviderError.serverError(code: error.code ?? "", message: error.message ?? ""))
-                        } else{
-                            callback(nil, OVPMediaProviderError.serverError(code: "Blocked", message: "Blocked"))
-                        }
-                        return
+                if (playbackContext.hasBlockAction() != nil) {
+                    if let error = playbackContext.hasErrorMessage() {
+                        callback(nil, OVPMediaProviderError.serverError(code: error.code ?? "", message: error.message ?? ""))
+                    } else{
+                        callback(nil, OVPMediaProviderError.serverError(code: "Blocked", message: "Blocked"))
                     }
+                    return
                 }
                 
                 var mediaSources: [PKMediaSource] = [PKMediaSource]()
@@ -265,6 +257,38 @@ import PlayKit
         }
     }
     
+    private func getStartWidgetRequest(serverUrl: String, partnerId: Int64) -> KalturaRequestBuilder? {
+        let request = OVPSessionService.startWidgetSession(baseURL: serverUrl, partnerId: partnerId)
+        request?.set(completion: { (response) in
+            self.ks = (OVPResponseParser.parse(data: response.data) as? OVPStartWidgetSessionResponse)?.ks
+        })
+        return request
+    }
+    
+    private func getPlaybackContextRequest(serverUrl: String, ks: String, entryId: String, referrer: String?) -> KalturaRequestBuilder? {
+        let request = OVPBaseEntryService.getPlaybackContext(baseURL: serverUrl, ks: ks, entryID: entryId, referrer: referrer)
+        request?.set(completion: { (response) in
+            self.playbackContext = OVPResponseParser.parse(data: response.data) as? OVPPlaybackContext
+        })
+        return request
+    }
+    
+    private func getMetadataRequest(serverUrl: String, ks: String, entryId: String) -> KalturaRequestBuilder? {
+        let request = OVPBaseEntryService.metadata(baseURL: serverUrl, ks: ks, entryID: entryId)
+        request?.set(completion: { (response) in
+            self.metadataList = (OVPResponseParser.parse(data: response.data) as? OVPList)?.objects as? [OVPMetadata]
+        })
+        return request
+    }
+    
+    private func getEntryRequest(serverUrl: String, ks: String, entryId: String) -> KalturaRequestBuilder? {
+        let request = OVPBaseEntryService.list(baseURL: serverUrl, ks: ks, entryID: entryId)
+        request?.set(completion: { (response) in
+            self.entry = (OVPResponseParser.parse(data: response.data) as? OVPList)?.objects?.last as? OVPEntry
+        })
+        return request
+    }
+    
     private func getMetadata(metadataList: [OVPMetadata]) -> [String: String] {
         var metaDataItems = [String: String]()
 
@@ -272,7 +296,7 @@ import PlayKit
             do {
                 if let metaXML = meta.xml {
                     let xml = try XML.parse(metaXML)
-                    if let allNodes = xml["metadata"].all{
+                    if let allNodes = xml["metadata"].all {
                         for element in allNodes {
                             for dataElement in element.childElements {
                                 metaDataItems[dataElement.name] = dataElement.text
