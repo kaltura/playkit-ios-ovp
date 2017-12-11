@@ -14,7 +14,7 @@ import KalturaNetKit
 
 public class OVPSessionService {
         
-    public static func startWidgetSession(baseURL: String, partnerId: Int64) -> KalturaRequestBuilder? {
+    public static func startWidgetSession(baseURL: String, partnerId: Int) -> KalturaRequestBuilder? {
         
         if let request: KalturaRequestBuilder = KalturaRequestBuilder(url: baseURL,
                                                                       service: "session",

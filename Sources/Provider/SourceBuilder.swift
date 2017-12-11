@@ -14,7 +14,7 @@ class SourceBuilder {
 
         
     var baseURL: String?
-    var partnerId: Int64?
+    var partnerId: Int?
     var ks: String?
     var entryId: String?
     var flavors:[String]?
@@ -32,7 +32,7 @@ class SourceBuilder {
     }
     
     @discardableResult
-    func set(partnerId:Int64?) -> SourceBuilder {
+    func set(partnerId:Int?) -> SourceBuilder {
         self.partnerId = partnerId
         return self
     }

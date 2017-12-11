@@ -104,7 +104,7 @@ import PlayKit
     /// - Parameter partnerId
     /// - Returns: Self
     @discardableResult
-    @nonobjc public func set(partnerId: Int64?) -> Self {
+    @nonobjc public func set(partnerId: Int?) -> Self {
         self.partnerId = NSNumber.init(value: partnerId ?? -1)
         return self
     }
@@ -173,7 +173,7 @@ import PlayKit
                 callback(nil, OVPMediaProviderError.invalidParam(paramName: "partnerId"))
                 return
             }
-            if let loginRequestBuilder = getStartWidgetRequest(serverUrl: apiBaseUrl, partnerId: partnerId.int64Value) {
+            if let loginRequestBuilder = getStartWidgetRequest(serverUrl: apiBaseUrl, partnerId: partnerId.intValue) {
                 mrb?.add(request: loginRequestBuilder)
                 ks = "{1:result:ks}"
             }
@@ -260,7 +260,7 @@ import PlayKit
         }
     }
     
-    private func getStartWidgetRequest(serverUrl: String, partnerId: Int64) -> KalturaRequestBuilder? {
+    private func getStartWidgetRequest(serverUrl: String, partnerId: Int) -> KalturaRequestBuilder? {
         let request = OVPSessionService.startWidgetSession(baseURL: serverUrl, partnerId: partnerId)
         request?.set(completion: { (response) in
             self.ks = (OVPResponseParser.parse(data: response.data) as? OVPStartWidgetSessionResponse)?.ks
@@ -356,7 +356,7 @@ import PlayKit
                 .set(entryId: entryId)
                 .set(uiconfId: uiconfId?.int64Value)
                 .set(flavors: source.flavors)
-                .set(partnerId: partnerId?.int64Value)
+                .set(partnerId: partnerId?.intValue)
                 .set(sourceProtocol: source.protocols?.last)
                 .set(fileExtension: formatType.fileExtension)
                 .set(ks: ks)
