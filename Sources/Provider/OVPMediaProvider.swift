@@ -70,7 +70,10 @@ import PlayKit
     
     private var ks: String?
     private var apiBaseUrl: String {
-        return (baseUrl ?? "") + "/api_v3"
+        if let baseUrl = baseUrl {
+            return baseUrl + (baseUrl.hasSuffix("/") ? "" : "/") + "api_v3"
+        }
+        return ""
     }
     
     public override init() {}

@@ -99,7 +99,7 @@ class SourceBuilder {
             return nil
         }
         
-        var urlAsString: String = baseURL + "/p/" + String(partnerId) + "/sp/" + String(partnerId) + "00/playManifest" + "/entryId/" + entryId + "/protocol/" + sourceProtocol + "/format/" + format
+        var urlAsString: String = baseURL + (baseURL.hasSuffix("/") ? "" : "/") + "p/" + String(partnerId) + "/sp/" + String(partnerId) + "00/playManifest" + "/entryId/" + entryId + "/protocol/" + sourceProtocol + "/format/" + format
         
         var flavorsExist = false
         if let flavors = self.flavors {
