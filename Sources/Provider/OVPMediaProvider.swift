@@ -15,7 +15,7 @@ import PlayKit
 
 @objc public class OVPMediaProvider: NSObject {
     
-    enum OVPMediaProviderError: PKError {
+    public enum OVPMediaProviderError: PKError {
         case invalidParam(paramName: String)
         case invalidKS
         case invalidParams
