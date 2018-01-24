@@ -154,13 +154,13 @@ import PlayKit
     public func loadMedia(callback: @escaping (PKMediaEntry?, Error?) -> Void){
         guard let _ = self.baseUrl else {
             PKLog.debug("Proivder must have baseUrl")
-            callback(nil, OVPMediaProviderError.invalidParam(paramName: "baseUrl"))
+            callback(nil, OVPMediaProviderError.invalidParam(paramName: "baseUrl").asNSError)
             return
         }
         // entryId is requierd
         guard let entryId = self.entryId else {
             PKLog.debug("Proivder must have entryId")
-            callback(nil, OVPMediaProviderError.invalidParam(paramName: "entryId"))
+            callback(nil, OVPMediaProviderError.invalidParam(paramName: "entryId").asNSError)
             return
         }
         
@@ -170,7 +170,7 @@ import PlayKit
             // Adding "startWidgetSession" request in case we don't have ks
             guard let partnerId = self.partnerId else {
                 PKLog.debug("Proivder must have partnerId")
-                callback(nil, OVPMediaProviderError.invalidParam(paramName: "partnerId"))
+                callback(nil, OVPMediaProviderError.invalidParam(paramName: "partnerId").asNSError)
                 return
             }
             if let loginRequestBuilder = getStartWidgetRequest(serverUrl: apiBaseUrl, partnerId: partnerId.intValue) {
@@ -182,7 +182,7 @@ import PlayKit
         // if we don't have forwared token and not real token we can't continue
         guard let token = ks else {
             PKLog.debug("can't find ks and can't request as anonymous ks (WidgetSession)")
-            callback(nil, OVPMediaProviderError.invalidKS)
+            callback(nil, OVPMediaProviderError.invalidKS.asNSError)
             return
         }
         
@@ -191,7 +191,7 @@ import PlayKit
         let metadataRequest = getMetadataRequest(serverUrl: apiBaseUrl, ks: token, entryId: entryId)
         
         guard let req1 = listRequest, let req2 = getPlaybackContext, let req3 = metadataRequest else {
-            callback(nil, OVPMediaProviderError.invalidParams)
+            callback(nil, OVPMediaProviderError.invalidParams.asNSError)
             return
         }
         
@@ -207,15 +207,15 @@ import PlayKit
                     let metadataList = self.metadataList
                     else {
                         PKLog.debug("Response is not containing Entry info or playback data")
-                        callback(nil, OVPMediaProviderError.invalidResponse)
+                        callback(nil, OVPMediaProviderError.invalidResponse.asNSError)
                         return
                 }
                 
                 if (playbackContext.hasBlockAction() != nil) {
                     if let error = playbackContext.hasErrorMessage() {
-                        callback(nil, OVPMediaProviderError.serverError(code: error.code ?? "", message: error.message ?? ""))
+                        callback(nil, OVPMediaProviderError.serverError(code: error.code ?? "", message: error.message ?? "").asNSError)
                     } else{
-                        callback(nil, OVPMediaProviderError.serverError(code: "Blocked", message: "Blocked"))
+                        callback(nil, OVPMediaProviderError.serverError(code: "Blocked", message: "Blocked").asNSError)
                     }
                     return
                 }
@@ -256,7 +256,7 @@ import PlayKit
         if let request = mrb?.build() {
             (executor ?? USRExecutor.shared).send(request: request)
         } else {
-            callback(nil, OVPMediaProviderError.invalidParams)
+            callback(nil, OVPMediaProviderError.invalidParams.asNSError)
         }
     }
     
